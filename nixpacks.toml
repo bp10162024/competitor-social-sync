@@ -1,0 +1,3 @@
+# Supabase JS client needs libatomic1 at runtime on Railway/Nixpacks
+[phases.setup]
+aptPkgs = ["libatomic1"]
