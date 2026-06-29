@@ -58,6 +58,21 @@ const app = express();
 app.get("/health", (_req, res) => res.send("OK"));
 app.get("/status", (_req, res) => res.json({ isRunning, lastRun }));
 
+// Digest-only: rebuild & post from the latest stored snapshots (no scrape). Token-gated.
+app.post("/digest", async (req, res) => {
+  const token = req.query.token || req.headers["x-run-token"];
+  if (!RUN_TOKEN || token !== RUN_TOKEN) return res.status(403).json({ error: "forbidden" });
+  try {
+    const weekStart = weekStartOf();
+    const snaps = await getSnapshots(weekStart);
+    const prior = await getPriorSnapshotMap(weekStart);
+    const messages = await postDigest(snaps, prior, weekStart);
+    res.json({ ok: true, weekStart, snapshots: snaps.length, messages });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Manual trigger. Long-running, so kick off in the background and return immediately.
 app.post("/run", (req, res) => {
   const token = req.query.token || req.headers["x-run-token"];
